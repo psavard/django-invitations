@@ -73,4 +73,11 @@ class AppSettings(object):
         """
         return self._setting("EMAIL_SUBJECT_PREFIX", None)
 
+    @property
+    def CUSTOM_INVITER_MODEL(self):
+        """
+        Model used to link with the invitation
+        """
+        return self._setting("CUSTOM_INVITER_MODEL", settings.AUTH_USER_MODEL)
+
 app_settings = AppSettings('INVITATIONS_')

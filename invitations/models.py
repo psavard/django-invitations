@@ -27,7 +27,7 @@ class Invitation(models.Model):
     key = models.CharField(verbose_name=_('key'), max_length=64, unique=True)
     sent = models.DateTimeField(verbose_name=_('sent'), null=True)
     inviter = models.ForeignKey(
-        settings.AUTH_USER_MODEL, null=True, blank=True)
+        app_settings.CUSTOM_INVITER_MODEL, null=True, blank=True)
 
     objects = InvitationManager()
 
