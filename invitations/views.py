@@ -140,7 +140,7 @@ class AcceptInvite(SingleObjectMixin, View):
 
         # The invitation is valid.
         # Mark it as accepted now if ACCEPT_INVITE_AFTER_SIGNUP is False.
-        if not app_settings.ACCEPT_INVITE_AFTER_SIGNUP:
+        if not self.request.user.is_anonymous or not app_settings.ACCEPT_INVITE_AFTER_SIGNUP:
             accept_invitation(invitation=invitation,
                               request=self.request,
                               signal_sender=self.__class__)
