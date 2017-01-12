@@ -166,7 +166,7 @@ def accept_invitation(invitation, request, signal_sender):
     invitation.accepted = True
     invitation.save()
 
-    invite_accepted.send(sender=signal_sender, email=invitation.email)
+    invite_accepted.send(sender=signal_sender, request=request, email=invitation.email)
 
     get_invitations_adapter().add_message(
         request,
