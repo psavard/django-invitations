@@ -1,5 +1,7 @@
 import json
 
+from allauth.account.models import EmailAddress
+from django.contrib.auth import logout
 from django.views.generic import FormView, View
 from django.views.generic.detail import SingleObjectMixin
 from django.contrib import messages
@@ -140,10 +142,18 @@ class AcceptInvite(SingleObjectMixin, View):
 
         # The invitation is valid.
         # Mark it as accepted now if ACCEPT_INVITE_AFTER_SIGNUP is False.
-        if not self.request.user.is_anonymous or not app_settings.ACCEPT_INVITE_AFTER_SIGNUP:
+        if not app_settings.ACCEPT_INVITE_AFTER_SIGNUP:
             accept_invitation(invitation=invitation,
                               request=self.request,
                               signal_sender=self.__class__)
+
+        # The email already exists, redirect to the login view
+        email_already_exists = EmailAddress.objects.filter(email=invitation.email).exists()
+        if email_already_exists:
+            logout(self.request)
+            get_invitations_adapter().stash_verified_email(
+                self.request, invitation.email)
+            return redirect(app_settings.LOGIN_REDIRECT)
 
         get_invitations_adapter().stash_verified_email(
             self.request, invitation.email)
