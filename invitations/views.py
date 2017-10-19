@@ -1,6 +1,9 @@
 import json
 
 from allauth.account.models import EmailAddress
+from allauth.account.signals import user_signed_up
+from django.contrib.auth.signals import user_logged_in
+# from allauth.account.signals import user_logged_in
 from django.contrib.auth import logout
 from django.views.generic import FormView, View
 from django.views.generic.detail import SingleObjectMixin
@@ -141,6 +144,9 @@ class AcceptInvite(SingleObjectMixin, View):
             return redirect(app_settings.SIGNUP_REDIRECT)
 
         # The invitation is valid.
+        # Add the invitation email in the session
+        self.request.session['invitation_clicked_email'] = invitation.email
+
         # Mark it as accepted now if ACCEPT_INVITE_AFTER_SIGNUP is False.
         if not app_settings.ACCEPT_INVITE_AFTER_SIGNUP:
             accept_invitation(invitation=invitation,
@@ -150,13 +156,7 @@ class AcceptInvite(SingleObjectMixin, View):
         # The email already exists, redirect to the login view
         email_already_exists = EmailAddress.objects.filter(email=invitation.email).exists()
         if email_already_exists:
-            logout(self.request)
-            get_invitations_adapter().stash_verified_email(
-                self.request, invitation.email)
             return redirect(app_settings.LOGIN_REDIRECT)
-
-        get_invitations_adapter().stash_verified_email(
-            self.request, invitation.email)
 
         return redirect(app_settings.SIGNUP_REDIRECT)
 
@@ -176,7 +176,7 @@ def accept_invitation(invitation, request, signal_sender):
     invitation.accepted = True
     invitation.save()
 
-    invite_accepted.send(sender=signal_sender, request=request, email=invitation.email)
+    var = invite_accepted.send(sender=signal_sender, request=request, email=invitation.email)
 
     get_invitations_adapter().add_message(
         request,
@@ -185,13 +185,19 @@ def accept_invitation(invitation, request, signal_sender):
         {'email': invitation.email})
 
 
-def accept_invite_after_signup(sender, request, user, **kwargs):
-    invitation = Invitation.objects.filter(email=user.email).first()
+def accept_invite_after_login_or_signup(sender, request, user, **kwargs):
+    invitation_clicked_email = request.session['invitation_clicked_email']
+    email_address = EmailAddress.objects.filter(email=invitation_clicked_email).first()
+
+    invitation = None
+    if email_address and email_address.user == user:
+        invitation = Invitation.objects.filter(email=invitation_clicked_email).first()
+
     if invitation:
         accept_invitation(invitation=invitation,
                           request=request,
                           signal_sender=Invitation)
 
 if app_settings.ACCEPT_INVITE_AFTER_SIGNUP:
-    signed_up_signal = get_invitations_adapter().get_user_signed_up_signal()
-    signed_up_signal.connect(accept_invite_after_signup)
+    user_logged_in.connect(accept_invite_after_login_or_signup)
+    user_signed_up.connect(accept_invite_after_login_or_signup)
