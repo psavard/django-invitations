@@ -2,9 +2,7 @@ import json
 
 from allauth.account.models import EmailAddress
 from allauth.account.signals import user_signed_up
-from django.contrib.auth.signals import user_logged_in
-# from allauth.account.signals import user_logged_in
-from django.contrib.auth import logout
+from allauth.account.signals import user_logged_in
 from django.views.generic import FormView, View
 from django.views.generic.detail import SingleObjectMixin
 from django.contrib import messages
@@ -172,11 +170,11 @@ class AcceptInvite(SingleObjectMixin, View):
         return Invitation.objects.all()
 
 
-def accept_invitation(invitation, request, signal_sender):
+def accept_invitation(invitation, request, signal_sender, user):
     invitation.accepted = True
     invitation.save()
 
-    invite_accepted.send(sender=signal_sender, request=request, email=invitation.email)
+    invite_accepted.send(sender=signal_sender, request=request, email=invitation.email, user=user)
 
     get_invitations_adapter().add_message(
         request,
@@ -196,7 +194,8 @@ def accept_invite_after_login_or_signup(sender, request, user, **kwargs):
     if invitation:
         accept_invitation(invitation=invitation,
                           request=request,
-                          signal_sender=Invitation)
+                          signal_sender=Invitation,
+                          user=user)
 
 if app_settings.ACCEPT_INVITE_AFTER_SIGNUP:
     user_logged_in.connect(accept_invite_after_login_or_signup)
