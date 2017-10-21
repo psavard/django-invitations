@@ -188,25 +188,28 @@ def accept_invitation(invitation, request, signal_sender, user):
 
 
 def accept_invite_after_login_or_signup(sender, request, user, **kwargs):
-    invitation_clicked_email = None
-    if hasattr(request, 'session'):  # If the SessionMiddleware is not enabled, there is no session attribute
-        invitation_clicked_email = request.session.get('invitation_clicked_email')
+    # SessionMiddleware not enabled
+    if not hasattr(request, 'session'):
+        return
 
-    email_address = None
-    if invitation_clicked_email:
-        email_address = EmailAddress.objects.filter(email=invitation_clicked_email).first()
+    invitation_clicked_email = request.session.get('invitation_clicked_email')
 
-    invitation = None
-    if email_address and email_address.user == user:
-        invitation = Invitation.objects.filter(email=invitation_clicked_email).first()
-    else:
+    # No invitation has been clicked
+    if not invitation_clicked_email:
+        return
+
+    # Email not in ebcard or not in the user emails
+    existing_email_address = EmailAddress.objects.filter(email=invitation_clicked_email).first()
+    if not existing_email_address or not (existing_email_address.user == user):
         get_invitations_adapter().add_message(
             request,
             messages.WARNING,
             'invitations/messages/invite_cannot_be_accepted_wrong_user.txt',
             {'email': invitation_clicked_email})
+        return
 
-
+    # Accept invitation
+    invitation = Invitation.objects.filter(email=invitation_clicked_email).first()
     if invitation:
         accept_invitation(invitation=invitation,
                           request=request,
