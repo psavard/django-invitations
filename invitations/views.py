@@ -184,8 +184,13 @@ def accept_invitation(invitation, request, signal_sender, user):
 
 
 def accept_invite_after_login_or_signup(sender, request, user, **kwargs):
-    invitation_clicked_email = request.session['invitation_clicked_email']
-    email_address = EmailAddress.objects.filter(email=invitation_clicked_email).first()
+    invitation_clicked_email = None
+    if hasattr(request, 'session'):  # If the SessionMiddleware is not enabled, there is no session attribute
+        invitation_clicked_email = request.session.get('invitation_clicked_email')
+
+    email_address = None
+    if invitation_clicked_email:
+        email_address = EmailAddress.objects.filter(email=invitation_clicked_email).first()
 
     invitation = None
     if email_address and email_address.user == user:
