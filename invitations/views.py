@@ -3,6 +3,7 @@ import json
 from allauth.account.models import EmailAddress
 from allauth.account.signals import user_signed_up
 from allauth.account.signals import user_logged_in
+from django.contrib.auth import logout
 from django.views.generic import FormView, View
 from django.views.generic.detail import SingleObjectMixin
 from django.contrib import messages
@@ -142,6 +143,9 @@ class AcceptInvite(SingleObjectMixin, View):
             return redirect(app_settings.SIGNUP_REDIRECT)
 
         # The invitation is valid.
+        # Logout the current user
+        logout(self.request)
+
         # Add the invitation email in the session
         self.request.session['invitation_clicked_email'] = invitation.email
 
@@ -195,6 +199,13 @@ def accept_invite_after_login_or_signup(sender, request, user, **kwargs):
     invitation = None
     if email_address and email_address.user == user:
         invitation = Invitation.objects.filter(email=invitation_clicked_email).first()
+    else:
+        get_invitations_adapter().add_message(
+            request,
+            messages.WARNING,
+            'invitations/messages/invite_cannot_be_accepted_wrong_user.txt',
+            {'email': invitation_clicked_email})
+
 
     if invitation:
         accept_invitation(invitation=invitation,

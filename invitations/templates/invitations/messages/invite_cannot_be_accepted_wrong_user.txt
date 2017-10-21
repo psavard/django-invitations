@@ -1,0 +1,1 @@
+The invitation must be accepted by the user that owns the following email: {{ email }}.
