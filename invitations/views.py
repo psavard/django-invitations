@@ -192,9 +192,9 @@ def accept_invite_after_login_or_signup(sender, request, user, **kwargs):
     if not hasattr(request, 'session'):
         return
 
-    invitation_clicked_email = request.session.get('invitation_clicked_email')
+    invitation_clicked_email = request.session.pop('invitation_clicked_email', None)
 
-    # No invitation has been clicked
+    # No invitation email to handle
     if not invitation_clicked_email:
         return
 
